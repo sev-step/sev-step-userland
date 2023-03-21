@@ -4,6 +4,8 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdbool.h>
+#include <errno.h>
+#include <limits.h>
 
 #include "../../sev-step-lib/ansi-color-codes.h"
 #include "../../sev-step-lib/sev_step_api.h"
@@ -48,15 +50,45 @@ int test_setup_teardown_ctx(char* format_prefix,void* _args) {
     return HOST_CLIENT_SUCCESS;
 }
 
+/**
+ * @brief Wrapper with error handling around strtoul
+ *
+ * @param str string to parse as number
+ * @param base as described in strtoul doc
+ * @param result result param
+ * @return int SEV_STEP_OK or SEV_STEP_ERR
+ */
+int do_stroul(char *str, int base, uint64_t *result)
+{
+    (*result) = strtoul(str, NULL, base);
+    // if commented in, we cannot enter zero, as uses zero as an error case. it's just stupid
+    /*if ((*result) == 0) {
+      printf("line %d: failed to convert %s to uint64_t\n", __LINE__, str);
+      return 0;
+    }*/
+    if ((*result) == ULLONG_MAX && errno == ERANGE)
+    {
+        flf_printf("failed to convert %s to uint64_t. errno was ERANGE\n", str);
+        return HOST_CLIENT_ERROR;
+    }
+    return HOST_CLIENT_SUCCESS;
+}
 
+int main(int argc, char** argv) {
 
+    uint64_t timer_value = 0;
+    // if true, timer_value is valid
+    bool have_timer_value = false;
+    if (argc == 2)
+    {
+        if( HOST_CLIENT_SUCCESS != do_stroul(argv[1],0,&timer_value)) {
+            flf_printf("failed to parse timer_value\n");
+            return HOST_CLIENT_ERROR;
+        }
+        have_timer_value = true;
+        flf_printf("Parsed timer value 0x%jx\n",timer_value);
+    }
 
-
-
-
-int main() {
-
-    const int timer_value = 0x35;
 
     //
     // test_single_step_simple_long
@@ -73,7 +105,7 @@ int main() {
         .name = "test_single_step_simple_long",
         .test_function = test_single_step_simple,
         .args = (void*)&test_single_step_simple_long_args_t,
-        .skip = true
+        .skip = !have_timer_value
     };
 
     //
@@ -138,7 +170,7 @@ int main() {
         .name = "testdef_do_cache_attack_l2",
         .test_function = test_do_cache_attack_l2,
         .args = (void*)&test_do_cache_attack_l2_args,
-        .skip = true
+        .skip = !have_timer_value
     };
 
     /*test_do_cache_attack_kernel_aliasing_args_t test_do_cache_attack_kernel_aliasing_args = {
@@ -156,25 +188,25 @@ int main() {
             .name = "setup->teardown",
             .test_function = test_setup_teardown_ctx,
             .args = NULL,
-            .skip = true,
+            .skip = false,
         },
         {
             .name = "pagetrack write",
             .test_function = test_pagetrack_write,
             .args = NULL,
-            .skip = true,
+            .skip = false,
         },
         {
             .name = "pagetrack access",
             .test_function = test_pagetrack_access,
             .args = NULL,
-            .skip = true,
+            .skip = false,
         },
         {
             .name = "pagetrack exec",
             .test_function = test_pagetrack_exec,
             .args = NULL,
-            .skip = true,
+            .skip = false,
         },
         {
             .name = "test_track_all_rep",
@@ -216,7 +248,8 @@ int main() {
     if( skipped_tests == 0 ) {
         printf(BHGRN "\n All Tests SUCCEEDED\n Happy Pwning !\n" reset);
     } else {
-        printf(BHGRN "\n [%d/%d] Tests SUCCEEDED,"BHYEL"%d skipped\n" reset, tests_len-skipped_tests,tests_len,skipped_tests);
+        printf(BHGRN "\n[%d/%d] Tests SUCCEEDED,"BHYEL" %d skipped\n" reset, tests_len-skipped_tests,tests_len,skipped_tests);
+        printf("To enable tests that require single stepping, provide an APIC timer value as first param. If you want hex encoding, add prefix 0x.");
     }
 
     return 0;
