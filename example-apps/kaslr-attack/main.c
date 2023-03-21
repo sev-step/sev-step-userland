@@ -62,7 +62,8 @@ int main() {
         exit_code = EXIT_CODE_ERR;
         goto cleanup;
     }
-    
+
+    free_usp_event(event_type, event_buffer);
     printf("Acking event..\n");
     usp_ack_event(&ctx);
 
@@ -87,12 +88,10 @@ int main() {
     } else {
         printf("No RIP data avilable. Activate debug mode\n");
     }
-    
 
+    free_usp_event(event_type, event_buffer);
     printf("Acking event..\n");
     usp_ack_event(&ctx);
-
-
 
     printf("Closing API...\n");
     if(SEV_STEP_ERR == usp_close_ctx(&ctx)) {
