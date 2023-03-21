@@ -1,14 +1,13 @@
 # SEV STEP Library
 This repo contains the userspace library of the SEV STEP framework. To use it, you also need to run
-the corresponding kernel. See the main SEV STEP repo to pull and build all required components.
+the corresponding kernel. If you have not cloned this repo as a submodule of the `sev-step-meta` repo already, check out the manual there to setup the correct environment.
 
 # Features
-- **Page Granular Tracking:** Remove access rights from VM pages and observe the corresponding page faults. Upon a page fault, the VM is halted and the user space code is notified via a shared memory channel. The VM remains halted until the user space code finished processing the event. This allows the user space code to dynamically react to events, enabling is to implement complex attack logic.
-- **Single Stepping:** Interrupt the VM after every instruction. Like for page granular tracking the VM is paused and the user space code can react to events interactively.
-- **Cache Attacks:** Perform cache attacks from the Host against code running in the VM
-- **Read Register Values:** Use the SEV Debug API to access the VM's encrypted register values
+- **Interactive Page Granular Tracking:** Remove access rights from VM pages and observe the corresponding page faults. Upon a page fault, the VM is halted and the user space code is notified via a shared memory channel. The VM remains halted until the user space code finished processing the event. This allows the user space code to dynamically react to events, enabling is to implement complex attack logic.
+- **Interactive Single Stepping:** Interrupt the VM after every instruction. Like for page granular tracking the VM is paused and the user space code can react to events interactively.
+- **Interactive Cache Attacks:** Perform cache attacks from the Host against code running in the VM.
+- **Interactive Read Register Values:** Use the SEV Debug API to access the VM's encrypted register values
 
-All of these features
 
 
 # Component Overview
@@ -24,7 +23,7 @@ This repo has three main components
 1) Issue `make dependencies` to pull and build any external dependencies used by this code. You only need to do this once.
 2) Issue `make` to build all binaries and the sev step library
 
-After building, the binaries are in `sev-step-userland/build/binaries` and the library is in `sev-step-userland/build/libs`.
+After building, the binaries are in `sev-step-userland/build/binaries` (except for the server part of the end2end test, which is in `build/rust/target/release/`) and the library is in `sev-step-userland/build/libs`.
 
 # Use
 It is assumed, that you have followed the instructions in the `sev-step-meta` repo to install the correct kernel and configured a SEV SNP VM.
@@ -58,7 +57,7 @@ Use `cat /proc/cmdline` to check the currently configured options.
     `log_buf_len=1024MB nosmap nosmep nox2apic dis_ucode_dlr msr.allow_writes=on nmi_watchdog=0 iomem=relaxed no_timer_check`
 
 ### Core Pinning
-The aforementioned kernel command line options ensure that the core is not used by any other part of the system. To actually pin the VM to a core, you need to e.g. install [qemu-affinity](https://github.com/zegelin/qemu-affinity).
+The aforementioned kernel command line options ensure that the core is not used by any other part of the system. To actually pin the VM to a core, you need to install [qemu-affinity](https://github.com/zegelin/qemu-affinity).
 ### Frequency Fixing
 There are two options for frequency pinning. Some systems allow to disable frequency scaling in the BIOS, such that all cores
 run with a fixed frequency. The other alternative is to use Linux's cpu frequency scaling driver to fixate the frequency. 
@@ -77,14 +76,17 @@ target frequencies and use `cpufreq-set -r -c <cpu core>-g performance -u <freq>
 ## End2End Tests
 
 Contains a server binary for the VM an a client binary for the host system.
-Copy the server binary to the VM and start it. Afterwards start the client binary on the host.
+Copy the server binary `./build/rust/target/release/vm-server` to the VM and **start it with root privileges**.
+Make sure you have ran the `./post-startup-script.sh` from the previous step!
+Afterwards start the client binary on the host with `sudo env LD_LIBRARY_PATH=$LD_LIBRARY_PATH ./build/binaries/end2end-tests-hv-client`.
+
 The client will run a several tests  tests to ensure that the communication channel, page tracking, single stepping and cache attacks work properly.
 If you want to skip some test, you have to edit `end2end-tests/host-client/main.c` and set the test's `.skip` attribute to `true`.
 
 For the single stepping tests (e.g. `test_single_step_simple_long`) to work
 you have to tweak the timer value at the start of the main function until you don't get any multisteps but still make some progress with single steps.
 
-
+The end2end tests provide a great way to explore the functionality of the sev step library.
 
 ## References / Citations
 
