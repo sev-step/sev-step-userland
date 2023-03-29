@@ -304,18 +304,6 @@ int track_all_pages(usp_poll_api_ctx_t *ctx, enum kvm_page_track_mode mode) {
         return SEV_STEP_ERR;
     }
     
-    flf_printf("Waiting for job to complete...\n");
-    is_track_all_done_param_t result;
-    bool job_done = false;
-    while( !job_done) {
-        if( ioctl(ctx->kvm_fd, KVM_IS_TRACK_ALL_DONE, &result) < 0 ) {
-            perror("track_page: Error calling KVM_IS_TRACK_ALL_DONE ioctl");
-            return SEV_STEP_ERR;
-        }
-        job_done = result.is_done;
-        usleep(500000);
-    }
-    flf_printf("job completed\n");
     return SEV_STEP_OK;
 }
 

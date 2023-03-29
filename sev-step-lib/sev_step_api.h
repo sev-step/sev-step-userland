@@ -144,9 +144,7 @@ typedef struct {
 	uint64_t gpa;
 	int track_mode;
 } track_page_param_t;
-typedef struct {
-    bool is_done;
-} is_track_all_done_param_t;
+
 typedef struct {
 	int track_mode;
 } track_all_pages_t;
@@ -372,6 +370,5 @@ char* tracking_mode_to_string(enum kvm_page_track_mode mode);
 #define KVM_SEV_STEP_GPA_TO_HPA _IOWR(KVMIO, 0x19, gpa_to_hpa_param_t)
 #define KVM_SEV_STEP_CACHE_ATTACK_TESTBED _IO(KVMIO, 0x20)
 #define KVM_SEV_STEP_BUILD_ALIAS_EVS _IOWR(KVMIO, 0x21, build_eviction_set_param_t )
-#define KVM_IS_TRACK_ALL_DONE _IOWR(KVMIO, 0x22, is_track_all_done_param_t)
 
 #endif
